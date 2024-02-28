@@ -100,8 +100,9 @@ antXMLRunner = Tasty.TestReporter optionDescription runner
               fromMaybe (error "Attempted to lookup test by index outside bounds") $
                 IntMap.lookup i statusMap
 
-            let testCaseAttributes time = map (uncurry XML.Attr . first XML.unqual)
+            let testCaseAttributes time description = map (uncurry XML.Attr . first XML.unqual)
                   [ ("name", testName)
+                  , ("description", description)
                   , ("time", showTime time)
                   , ("classname", intercalate "." (reverse groupNames))
                   ]
@@ -111,17 +112,17 @@ antXMLRunner = Tasty.TestReporter optionDescription runner
                              (XML.node (XML.unqual "testcase") contents :)
                          }
 
-                mkSuccess time = (mkSummary (testCaseAttributes time)) { summarySuccesses = Sum 1 }
+                mkSuccess time description = (mkSummary (testCaseAttributes time description)) { summarySuccesses = Sum 1 }
 
                 mkFailure time reason =
-                  mkSummary ( testCaseAttributes time
+                  mkSummary ( testCaseAttributes time ""
                             , XML.node (XML.unqual "failure") reason
                             )
 
             case status of
               -- If the test is done, generate XML for it
               Tasty.Done result
-                | Tasty.resultSuccessful result -> pure (mkSuccess (Tasty.resultTime result))
+                | Tasty.resultSuccessful result -> pure (mkSuccess (Tasty.resultTime result) (Tasty.resultDescription result))
                 | otherwise ->
                     case resultException result of
                       Just e  -> pure $ (mkFailure (Tasty.resultTime result) (show e)) { summaryErrors = Sum 1 }
